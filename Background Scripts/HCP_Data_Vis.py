@@ -159,7 +159,9 @@ def shell_brain(brain_mesh):
     """
     
     vertices = brain_mesh.points
-    triangles = brain_mesh.cells[0][1]
+    #triangles = brain_mesh.cells[0][1]
+    triangles = brain_mesh.cells[0].data
+
     x, y, z = vertices.T
     I, J, K = triangles.T
     #showlegend=True gives the option to uncover the shell
@@ -1396,7 +1398,25 @@ list_areas = pd.read_csv(path_areas,header=None).values
 areas = [list_areas[0:n_rois,0][i] for i in range(0,n_rois)] 
 
 ## Create gray shell
-brain_mesh =  meshio.read(path_brainobj) # Reading a brain.obj file
+
+
+# Define a function to override meshio's read_buffer for OBJ to ignore normals
+def read_obj_ignore_normals(path):
+    # Manually read the file to exclude vertex normals
+    with open(path, 'r') as f:
+        lines = f.readlines()
+    # Filter out lines that start with 'vn' (vertex normal)
+    filtered_lines = filter(lambda line: not line.startswith('vn'), lines)
+    # Write the filtered content to a temporary string
+    from io import StringIO
+    modified_obj_data = StringIO(''.join(filtered_lines))
+    # Use meshio to read from the modified data
+    return meshio.obj._obj.read_buffer(modified_obj_data)
+
+# Use the custom function to read the OBJ file
+path_to_obj_file = path_brainobj
+brain_mesh = read_obj_ignore_normals(path_to_obj_file)
+#brain_mesh =  meshio.read(path_brainobj) # Reading a brain.obj file
 brain_trace = shell_brain(brain_mesh)
 trace1, _, _, _ = dictpos(areas, path_pos) # Transparent shell
 
